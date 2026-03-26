@@ -66,8 +66,8 @@ RED = "#D76565"
 AMBER = "#D99C48"
 
 
-APP_VERSION = "2.1.1"
-GITHUB_OWNER = "apb0618-debug"
+APP_VERSION = "2.1.2"
+GITHUB_OWNER = "Hazeofdream"
 GITHUB_REPO = "SPTWATCHDOG"
 GITHUB_LATEST_API = f"https://api.github.com/repos/{GITHUB_OWNER}/{GITHUB_REPO}/releases/latest"
 GITHUB_RELEASES_PAGE = f"https://github.com/{GITHUB_OWNER}/{GITHUB_REPO}/releases/latest"
@@ -76,6 +76,38 @@ PROCESS_RESTART_COOLDOWN_SEC = 10
 MINIMIZE_WINDOW_ATTEMPTS = 18
 MINIMIZE_WINDOW_DELAY_SEC = 0.75
 
+def get_next_cron_time(cron_expr: str, now: datetime) -> datetime:
+    """
+    Supports standard 5-field cron:
+    min hour day month weekday
+    Example: "0 5 * * *"
+    """
+    parts = cron_expr.strip().split()
+    if len(parts) != 5:
+        raise ValueError("Invalid cron format")
+
+    minute, hour, day, month, weekday = parts
+
+    def match(val, field):
+        if field == "*":
+            return True
+        return int(field) == val
+
+    next_time = now.replace(second=0, microsecond=0) + timedelta(minutes=1)
+
+    for _ in range(525600):  # max 1 year search
+        if (
+            match(next_time.minute, minute) and
+            match(next_time.hour, hour) and
+            (day == "*" or next_time.day == int(day)) and
+            (month == "*" or next_time.month == int(month)) and
+            (weekday == "*" or next_time.weekday() == int(weekday))
+        ):
+            return next_time
+
+        next_time += timedelta(minutes=1)
+
+    raise RuntimeError("Could not resolve cron time")
 
 def atomic_write_text(path: Path, content: str, encoding: str = "utf-8"):
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -274,7 +306,7 @@ class AppConfig:
     server_workdir: str = ""
     headless_workdir: str = ""
     headless_start_delay_sec: int = 10
-    restart_interval_hours: float = 24.0
+    restart_cron: str = "0 5 * * *"
     monitor_interval_sec: int = 5
     auto_restart_on_crash: bool = True
     auto_start_with_monitor: bool = True
@@ -724,7 +756,7 @@ class WatchdogSuiteWindow(QMainWindow):
             clean["server_workdir"] = str(clean.get("server_workdir", "") or "").strip()
             clean["headless_workdir"] = str(clean.get("headless_workdir", "") or "").strip()
             clean["headless_start_delay_sec"] = max(0, int(clean.get("headless_start_delay_sec", 10) or 0))
-            clean["restart_interval_hours"] = max(0.1, float(clean.get("restart_interval_hours", 24.0) or 24.0))
+            clean["restart_cron"] = str(clean.get("restart_cron", "0 5 * * *")).strip()
             clean["monitor_interval_sec"] = max(1, int(clean.get("monitor_interval_sec", 5) or 5))
             clean["auto_restart_on_crash"] = bool(clean.get("auto_restart_on_crash", True))
             clean["auto_start_with_monitor"] = bool(clean.get("auto_start_with_monitor", True))
@@ -1013,9 +1045,9 @@ class WatchdogSuiteWindow(QMainWindow):
         runtime = SectionCard("Runtime Settings")
         rt = QGridLayout(); rt.setHorizontalSpacing(10); rt.setVerticalSpacing(10)
         self.headless_delay = QSpinBox(); self.headless_delay.setRange(0, 9999)
-        self.restart_hours = QDoubleSpinBox(); self.restart_hours.setRange(0.1, 9999.0); self.restart_hours.setDecimals(2)
+        self.restart_cron_input = QLineEdit(); self.restart_cron_input.setPlaceholderText("0 5 * * *  (5:00 AM daily)")
         self.monitor_interval = QSpinBox(); self.monitor_interval.setRange(1, 9999)
-        vals = [("Headless Start Delay (seconds)", self.headless_delay), ("Scheduled Restart Interval (hours)", self.restart_hours), ("Monitor Check Interval (seconds)", self.monitor_interval)]
+        vals = [("Headless Start Delay (seconds)", self.headless_delay), ("Scheduled Restart Interval (hours)", self.restart_cron_input), ("Monitor Check Interval (seconds)", self.monitor_interval)]
         for i, (label, spin) in enumerate(vals):
             rt.addWidget(self._label(label, "fieldLabel"), i, 0)
             rt.addWidget(spin, i, 1)
@@ -1126,7 +1158,7 @@ class WatchdogSuiteWindow(QMainWindow):
             server_workdir=self.server_workdir.text().strip(),
             headless_workdir=self.headless_workdir.text().strip(),
             headless_start_delay_sec=int(self.headless_delay.value()),
-            restart_interval_hours=float(self.restart_hours.value()),
+            restart_cron=self.restart_cron_input.text().strip(),
             monitor_interval_sec=int(self.monitor_interval.value()),
             auto_restart_on_crash=self.chk_auto_restart.isChecked(),
             auto_start_with_monitor=True,
@@ -1144,19 +1176,34 @@ class WatchdogSuiteWindow(QMainWindow):
         except ValueError:
             QMessageBox.critical(self, APP_NAME, "One or more numeric fields are invalid.")
             return False
-        if cfg.headless_start_delay_sec < 0 or cfg.restart_interval_hours <= 0 or cfg.monitor_interval_sec <= 0:
-            QMessageBox.critical(self, APP_NAME, "Delay and intervals must be greater than zero.")
+
+        # Validate numeric fields (cron replaces restart_interval_hours)
+        if cfg.headless_start_delay_sec < 0 or cfg.monitor_interval_sec <= 0:
+            QMessageBox.critical(self, APP_NAME, "Delay and monitor interval must be greater than zero.")
             return False
+
+        # Validate cron expression
+        try:
+            get_next_cron_time(cfg.restart_cron, datetime.now())
+        except Exception:
+            QMessageBox.critical(
+                self,
+                APP_NAME,
+                "Invalid cron format.\nExample: 0 5 * * * (5:00 AM daily)"
+            )
+            return False
+
         self.config = cfg
         return True
 
     def apply_config_to_ui(self):
+        
         self.server_path.setText(self.config.server_path)
         self.headless_path.setText(self.config.headless_path)
         self.server_workdir.setText(self.config.server_workdir)
         self.headless_workdir.setText(self.config.headless_workdir)
         self.headless_delay.setValue(self.config.headless_start_delay_sec)
-        self.restart_hours.setValue(self.config.restart_interval_hours)
+        self.restart_cron_input.setText(self.config.restart_cron)
         self.monitor_interval.setValue(self.config.monitor_interval_sec)
         self.chk_auto_restart.setChecked(self.config.auto_restart_on_crash)
         self.chk_minimize.setChecked(self.config.minimize_to_tray)
@@ -1402,7 +1449,7 @@ class WatchdogSuiteWindow(QMainWindow):
             self._start_server_with_minimize()
             self._next_headless_launch_id()
             threading.Thread(target=self._start_headless_with_delay, daemon=True).start()
-            self.next_restart_time = datetime.now() + timedelta(hours=self.config.restart_interval_hours)
+            self.next_restart_time = get_next_cron_time(self.config.restart_cron, datetime.now())
             self.send_discord_webhook_async(f"[{APP_NAME}] Scheduled restart completed. Next scheduled restart: {self._format_restart_time()}")
         finally:
             self.server_proc.stop_requested = False
@@ -1422,7 +1469,7 @@ class WatchdogSuiteWindow(QMainWindow):
         self.monitor_stop_event.clear()
         now = datetime.now()
         self.last_scheduled_restart = now
-        self.next_restart_time = now + timedelta(hours=self.config.restart_interval_hours)
+        self.next_restart_time = get_next_cron_time(self.config.restart_cron, now)
         self.monitor_thread = threading.Thread(target=self.monitor_loop, daemon=True)
         self.monitor_thread.start()
         self.discord_last_monitor_stop_notice = False
