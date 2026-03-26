@@ -864,8 +864,6 @@ class WatchdogSuiteWindow(QMainWindow):
         layout = QVBoxLayout(sidebar)
         layout.setContentsMargins(18, 20, 18, 20)
         layout.setSpacing(12)
-        layout.addWidget(brand)
-        layout.addWidget(subtitle)
         layout.addSpacing(10)
         self.nav_dashboard = NavButton("Dashboard")
         self.nav_additions = NavButton("Additions")
@@ -1109,8 +1107,6 @@ class WatchdogSuiteWindow(QMainWindow):
             QMainWindow, QWidget {{ background: {BG}; color: {TEXT}; font-family: 'Segoe UI'; font-size: 13px; }}
             QLabel {{ background: transparent; color: {TEXT}; }}
             #sidebar {{ background: {SIDEBAR}; border-right: 1px solid {BORDER_SOFT}; }}
-            #brandTitle {{ font-size: 24px; font-weight: 800; color: {TEXT}; background: transparent; }}
-            #brandSubtitle, #footerSecondary, #pageSubtitle, #helperText {{ color: {MUTED}; font-size: 12px; background: transparent; }}
             #footerPrimary {{ color: #E4B58C; font-size: 12px; font-weight: 700; background: transparent; }}
             #sidebarFooter {{ background: transparent; border: none; }}
             #navButton {{ background: {PANEL}; border: 1px solid {BORDER_SOFT}; border-radius: 12px; text-align: left; padding: 11px 14px; color: {TEXT}; }}
