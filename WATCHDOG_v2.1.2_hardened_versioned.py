@@ -886,6 +886,7 @@ class WatchdogSuiteWindow(QMainWindow):
         fl = QVBoxLayout(footer)
         fl.setContentsMargins(12, 12, 12, 12)
         fl.addWidget(self._label("Developed by NOCTIDE", "footerPrimary"))
+        fl.addWidget(self._label("Fork from Haze_of_dream", "footerSecondary"))
         fl.addWidget(self._label(f"Version {APP_VERSION}", "footerSecondary"))
         fl.addWidget(self._label("Do not redistribute.", "footerSecondary"))
         layout.addWidget(footer)

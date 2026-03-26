@@ -1,0 +1,1 @@
+pyinstaller "C:/Users/Haze_of_dream/Desktop/SPTWATCHDOG/WATCHDOG_v2.1.2_hardened_versioned.py" --name "Watchdog" --onefile --windowed --hidden-import PySide6 --icon="C:/Users/Haze_of_dream/Desktop/SPTWATCHDOG/watchdog.ico" --distpath="C:/Users/Haze_of_dream/Desktop/SPTWATCHDOG" --log-level ERROR
