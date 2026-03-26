@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['C:/Users/Haze_of_dream/Desktop/SPTWATCHDOG/WATCHDOG_v2.1.2_hardened_versioned.py'],
+    ['C:/Users/Haze_of_dream/Desktop/SPTWATCHDOG/WATCHDOG_v2.1.3_hardened_versioned.py'],
     pathex=[],
     binaries=[],
     datas=[],
