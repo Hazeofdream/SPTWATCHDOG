@@ -1468,9 +1468,10 @@ class WatchdogSuiteWindow(QMainWindow):
         self.monitor_thread = threading.Thread(target=self.monitor_loop, daemon=True)
         self.monitor_thread.start()
         self.discord_last_monitor_stop_notice = False
-        self.log("[monitor] started.")
-        self.log(f"[monitor] next scheduled restart at {self.next_restart_time.strftime('%Y-%m-%d %H:%M:%S')}")
-        self.send_discord_webhook_async(f"Monitor started. Next scheduled restart: {self._format_restart_time()}")
+        self.log("Server Started.")
+        self.log(f"Next scheduled restart at {self.next_restart_time.strftime('%Y-%m-%d %H:%M:%S')}")
+        discord_time = f"<t:{int(self.next_restart_time.timestamp())}:F>"
+        self.send_discord_webhook_async(f"Monitor started. Next scheduled restart: {discord_time}")
         threading.Thread(target=self._start_both_impl, daemon=True).start()
         self._schedule_auto_minimize_to_tray()
 
