@@ -753,7 +753,7 @@ class WatchdogSuiteWindow(QMainWindow):
 
     # ---------- Logging ----------
     def log(self, message: str):
-        stamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        stamp = datetime.now().strftime("%m/%d/%Y %I:%M:%S %p")
         self.log_queue.put(f"{stamp} {message}")
 
     def process_log_queue(self):
@@ -774,7 +774,7 @@ class WatchdogSuiteWindow(QMainWindow):
 
     # ---------- Discord ----------
     def _format_restart_time(self):
-        return self.next_restart_time.strftime("%Y-%m-%d %H:%M:%S") if self.next_restart_time else "Not scheduled"
+        return self.next_restart_time.strftime("%m/%d/%Y %I:%M:%S %p") if self.next_restart_time else "Not scheduled"
 
     def _post_discord_webhook(self, message: str, force=False):
         url = self.config.discord_webhook_url.strip()
