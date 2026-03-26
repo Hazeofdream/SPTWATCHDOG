@@ -38,7 +38,7 @@ try:
 except ImportError:
     winreg = None
 
-APP_NAME = "WATCHDOG"
+APP_NAME = "Server"
 APP_DATA_DIR_NAME = "WATCHDOG"
 APP_SUBTITLE = "SPT/FIKA Operations Suite"
 ADDITION_TYPES = [
